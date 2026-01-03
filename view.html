@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ammar Toolkit Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .slide-up { animation: slideUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-white">
+
+    <div class="max-w-xl mx-auto min-h-screen relative pb-12 shadow-2xl bg-[#0f172a]">
+        
+        <!-- Header Image -->
+        <div class="h-48 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-b-[3rem] relative overflow-hidden">
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="px-6 -mt-20 text-center relative z-10">
+            
+            <div class="inline-block p-1 rounded-full bg-gray-900 mb-4">
+                <img id="pAvatar" src="https://via.placeholder.com/150" class="w-32 h-32 rounded-full border-4 border-gray-900 object-cover shadow-2xl bg-gray-800">
+            </div>
+
+            <h1 id="pTitle" class="text-3xl font-bold mb-2">Loading...</h1>
+            <p id="pDesc" class="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">Please wait while we fetch the toolkit.</p>
+
+            <!-- Social/Share Button (Optional Visual) -->
+            <div class="mt-6 mb-10 flex justify-center gap-4">
+                <button onclick="navigator.share({title: document.title, url: window.location.href})" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full text-sm font-medium transition backdrop-blur-sm">
+                    <i class="fas fa-share-alt mr-2"></i> Share Page
+                </button>
+            </div>
+
+            <!-- Links Container -->
+            <div id="linksBox" class="space-y-4 px-2">
+                <!-- Links injected via JS -->
+            </div>
+
+            <!-- Branding Footer -->
+            <div class="mt-16 pt-8 border-t border-gray-800 flex flex-col items-center opacity-60">
+                <i class="fas fa-layer-group text-2xl mb-2 text-indigo-500"></i>
+                <p class="text-xs font-semibold tracking-wider">AMMAR TOOLKIT BUILDER</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, doc, getDoc } from './config.js';
+
+        // 1. Get ID from URL (e.g., view.html?page=ammar-pro)
+        const params = new URLSearchParams(window.location.search);
+        const pageID = params.get('page');
+
+        async function init() {
+            // Error Handling: If no ID provided
+            if(!pageID) {
+                document.body.innerHTML = `<div class="h-screen flex items-center justify-center flex-col text-center p-4">
+                    <h1 class="text-4xl font-bold text-gray-700 mb-4">404</h1>
+                    <p class="text-gray-500">No page ID specified in URL.</p>
+                    <a href="index.html" class="mt-4 text-indigo-500 hover:underline">Create your own page</a>
+                </div>`;
+                return;
+            }
+
+            try {
+                const ref = doc(db, "pages", pageID);
+                const snap = await getDoc(ref);
+
+                if(snap.exists()) {
+                    const data = snap.data();
+                    
+                    document.title = `${data.originalName || data.title} | Toolkit`;
+                    document.getElementById('pTitle').innerText = data.originalName || data.title;
+                    document.getElementById('pDesc').innerText = data.description;
+                    
+                    if(data.avatar) document.getElementById('pAvatar').src = data.avatar;
+                    else document.getElementById('pAvatar').src = `https://ui-avatars.com/api/?name=${data.title}&background=random&color=fff`;
+
+                    const box = document.getElementById('linksBox');
+                    box.innerHTML = '';
+
+                    // Loop through links with animation delay
+                    data.links.forEach((l, index) => {
+                        const a = document.createElement('a');
+                        a.href = l.url;
+                        a.target = "_blank";
+                        a.className = "slide-up block bg-gray-800 hover:bg-gray-700 hover:-translate-y-1 transition-all duration-300 p-4 rounded-xl flex items-center gap-4 border border-gray-700 shadow-lg group";
+                        a.style.animationDelay = `${index * 100}ms`;
+
+                        a.innerHTML = `
+                            <div class="w-12 h-12 rounded-lg bg-gray-900 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:ring-2 ring-indigo-500 transition-all">
+                                <img src="${l.image || 'https://via.placeholder.com/50'}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100">
+                            </div>
+                            <div class="flex-1 text-left overflow-hidden">
+                                <h3 class="font-bold text-lg truncate text-gray-100 group-hover:text-indigo-400 transition-colors">${l.name}</h3>
+                                <p class="text-xs text-gray-500 truncate">${l.url}</p>
+                            </div>
+                            <div class="text-gray-600 group-hover:text-white transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        `;
+                        box.appendChild(a);
+                    });
+
+                } else {
+                    document.getElementById('pTitle').innerText = "User Not Found";
+                    document.getElementById('pDesc').innerText = "The page you are looking for does not exist.";
+                    document.getElementById('linksBox').innerHTML = `<a href="index.html" class="inline-block bg-indigo-600 px-6 py-2 rounded-full font-bold mt-4">Create This Page</a>`;
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Connection Error");
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
