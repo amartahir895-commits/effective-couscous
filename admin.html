@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Ammar Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>body{font-family:'Poppins',sans-serif;}</style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen pb-10">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center gap-2 text-indigo-700 font-bold text-xl">
+            <i class="fas fa-tools"></i> Toolkit Admin
+        </div>
+        <button onclick="logout()" class="text-gray-500 hover:text-red-500 text-sm font-medium transition">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+    </nav>
+
+    <div class="container mx-auto px-4 mt-8 max-w-5xl">
+        
+        <!-- Link Sharing Card -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white shadow-lg mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h2 class="font-bold text-lg">Your Public Page is Live!</h2>
+                <p class="text-indigo-100 text-sm opacity-90">Share this link with your audience.</p>
+            </div>
+            <div class="flex bg-white/10 rounded-lg p-1 w-full md:w-auto border border-white/20">
+                <input type="text" id="shareLink" readonly class="bg-transparent text-white text-sm px-3 py-2 outline-none w-full md:w-64" value="Loading...">
+                <button onclick="copyLink()" class="bg-white text-indigo-700 px-4 py-2 rounded-md text-sm font-bold hover:bg-gray-100 transition">
+                    Copy
+                </button>
+                <a id="openLink" href="#" target="_blank" class="ml-2 bg-indigo-800/50 text-white px-3 py-2 rounded-md hover:bg-indigo-800 transition">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-12 gap-8">
+            
+            <!-- LEFT: Profile -->
+            <div class="md:col-span-4 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">Profile Appearance</h3>
+                    
+                    <!-- Avatar -->
+                    <div class="text-center mb-6 relative group">
+                        <img id="avatarPreview" src="https://via.placeholder.com/150" class="w-24 h-24 mx-auto rounded-full object-cover border-4 border-indigo-50 shadow-md">
+                        <label class="absolute inset-0 flex items-center justify-center cursor-pointer">
+                            <span class="bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition">Change Logo</span>
+                            <input type="file" id="avatarInput" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+
+                    <form id="profileForm" class="space-y-3">
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 uppercase">Display Name</label>
+                            <input type="text" id="pTitle" class="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:border-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 uppercase">Bio / Description</label>
+                            <textarea id="pDesc" rows="3" class="w-full bg-gray-50 border border-gray-200 rounded p-2 text-sm focus:border-indigo-500 outline-none"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-gray-900 text-white py-2 rounded hover:bg-black transition text-sm">Save Details</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RIGHT: Tools -->
+            <div class="md:col-span-8 space-y-6">
+                
+                <!-- Add Tool -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4 border-b pb-2">Add New Tool</h3>
+                    <form id="addLinkForm" class="flex flex-col gap-4">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <input type="text" id="linkName" placeholder="Tool Name (e.g. Photoshop)" class="flex-1 bg-gray-50 border border-gray-200 rounded p-3 text-sm outline-none focus:border-indigo-500" required>
+                            <input type="url" id="linkUrl" placeholder="URL (https://...)" class="flex-1 bg-gray-50 border border-gray-200 rounded p-3 text-sm outline-none focus:border-indigo-500" required>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <input type="file" id="linkImg" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            <button type="submit" id="addBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 ml-auto text-sm font-semibold">
+                                <i class="fas fa-plus mr-1"></i> Add
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- List -->
+                <div id="linksList" class="space-y-3">
+                    <div class="text-center py-8 text-gray-400">Loading your toolkit...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, storage, doc, getDoc, updateDoc, arrayUnion, ref, uploadBytes, getDownloadURL } from './config.js';
+
+        const user = sessionStorage.getItem('user');
+        if(!user) window.location.href = 'index.html';
+
+        const docRef = doc(db, "pages", user);
+        
+        // Generate Public Link
+        // IMPORTANT: This creates the correct Vercel link structure
+        const publicUrl = `${window.location.origin}/view.html?page=${user}`;
+        document.getElementById('shareLink').value = publicUrl;
+        document.getElementById('openLink').href = publicUrl;
+
+        window.copyLink = () => {
+            navigator.clipboard.writeText(publicUrl);
+            alert("Link copied to clipboard!");
+        };
+
+        async function loadData() {
+            const snap = await getDoc(docRef);
+            if(snap.exists()) {
+                const data = snap.data();
+                document.getElementById('pTitle').value = data.originalName || data.title;
+                document.getElementById('pDesc').value = data.description;
+                if(data.avatar) document.getElementById('avatarPreview').src = data.avatar;
+                renderLinks(data.links || []);
+            }
+        }
+        loadData();
+
+        // Logo Upload
+        document.getElementById('avatarInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            document.getElementById('avatarPreview').style.opacity = '0.5';
+            const imgRef = ref(storage, `images/${user}/avatar_${Date.now()}`);
+            await uploadBytes(imgRef, file);
+            const url = await getDownloadURL(imgRef);
+            await updateDoc(docRef, { avatar: url });
+            document.getElementById('avatarPreview').src = url;
+            document.getElementById('avatarPreview').style.opacity = '1';
+        });
+
+        // Save Profile
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await updateDoc(docRef, {
+                originalName: document.getElementById('pTitle').value,
+                title: document.getElementById('pTitle').value,
+                description: document.getElementById('pDesc').value
+            });
+            alert("Saved!");
+        });
+
+        // Add Tool
+        document.getElementById('addLinkForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('addBtn');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+            const name = document.getElementById('linkName').value;
+            const url = document.getElementById('linkUrl').value;
+            const file = document.getElementById('linkImg').files[0];
+            let img = "";
+
+            if(file) {
+                const fRef = ref(storage, `images/${user}/tools/${Date.now()}_${file.name}`);
+                await uploadBytes(fRef, file);
+                img = await getDownloadURL(fRef);
+            }
+
+            await updateDoc(docRef, { links: arrayUnion({ name, url, image: img }) });
+            
+            e.target.reset();
+            loadData();
+            btn.innerHTML = ogText; btn.disabled = false;
+        });
+
+        function renderLinks(links) {
+            const div = document.getElementById('linksList');
+            div.innerHTML = '';
+            if(!links.length) div.innerHTML = '<div class="text-center py-8 text-gray-400">No tools added yet.</div>';
+
+            links.forEach((l, i) => {
+                const el = document.createElement('div');
+                el.className = "bg-white p-4 rounded-lg border border-gray-100 flex items-center justify-between hover:shadow-md transition";
+                el.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <img src="${l.image || 'https://via.placeholder.com/50'}" class="w-12 h-12 rounded-lg object-cover bg-gray-100">
+                        <div>
+                            <h4 class="font-bold text-gray-800">${l.name}</h4>
+                            <a href="${l.url}" target="_blank" class="text-xs text-indigo-500 hover:underline truncate w-48 block">${l.url}</a>
+                        </div>
+                    </div>
+                    <button onclick="del(${i})" class="text-gray-400 hover:text-red-500 w-8 h-8 rounded-full hover:bg-red-50 transition"><i class="fas fa-trash"></i></button>
+                `;
+                div.appendChild(el);
+            });
+        }
+
+        window.del = async (idx) => {
+            if(!confirm("Remove tool?")) return;
+            const snap = await getDoc(docRef);
+            const links = snap.data().links;
+            const newLinks = links.filter((_, i) => i !== idx);
+            await updateDoc(docRef, { links: newLinks });
+            loadData();
+        };
+
+        window.logout = () => { sessionStorage.clear(); window.location.href='index.html'; };
+    </script>
+</body>
+</html>
